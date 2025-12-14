@@ -9,7 +9,7 @@ const databases = {
     host: process.env.DB_HOST,
     user: process.env.DB_USER,
     password: process.env.DB_PASSWORD,
-    database: 'Infamous_token',
+    database: 'infamous_token',
     port: process.env.DB_PORT || 3306,
     waitForConnections: true,
     connectionLimit: 10,
