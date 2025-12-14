@@ -1,0 +1,431 @@
+{
+  "database": "infamous_iga",
+  "databaseKey": "iga",
+  "tables": {
+    "ip_log": {
+      "name": "ip_log",
+      "columns": [
+        {
+          "field": "SteamID64",
+          "type": "bigint(20)",
+          "null": "NO",
+          "key": "PRI",
+          "default": null,
+          "extra": ""
+        },
+        {
+          "field": "Data",
+          "type": "varchar(50)",
+          "null": "NO",
+          "key": "PRI",
+          "default": null,
+          "extra": ""
+        },
+        {
+          "field": "Date",
+          "type": "int(11)",
+          "null": "NO",
+          "key": "",
+          "default": null,
+          "extra": ""
+        }
+      ],
+      "indexes": [
+        {
+          "keyName": "PRIMARY",
+          "columnName": "SteamID64",
+          "nonUnique": 0,
+          "seqInIndex": 1
+        },
+        {
+          "keyName": "PRIMARY",
+          "columnName": "Data",
+          "nonUnique": 0,
+          "seqInIndex": 2
+        }
+      ],
+      "createStatement": "CREATE TABLE `ip_log` (\n  `SteamID64` bigint(20) NOT NULL,\n  `Data` varchar(50) NOT NULL,\n  `Date` int(11) NOT NULL,\n  PRIMARY KEY (`SteamID64`,`Data`)\n) ENGINE=MyISAM DEFAULT CHARSET=latin1 COLLATE=latin1_swedish_ci"
+    },
+    "od_times": {
+      "name": "od_times",
+      "columns": [
+        {
+          "field": "SteamID",
+          "type": "varchar(255)",
+          "null": "NO",
+          "key": "PRI",
+          "default": null,
+          "extra": ""
+        },
+        {
+          "field": "Minutes",
+          "type": "int(11)",
+          "null": "YES",
+          "key": "",
+          "default": null,
+          "extra": ""
+        },
+        {
+          "field": "LastReward",
+          "type": "int(11)",
+          "null": "YES",
+          "key": "",
+          "default": null,
+          "extra": ""
+        }
+      ],
+      "indexes": [
+        {
+          "keyName": "PRIMARY",
+          "columnName": "SteamID",
+          "nonUnique": 0,
+          "seqInIndex": 1
+        }
+      ],
+      "createStatement": "CREATE TABLE `od_times` (\n  `SteamID` varchar(255) NOT NULL,\n  `Minutes` int(11) DEFAULT NULL,\n  `LastReward` int(11) DEFAULT NULL,\n  PRIMARY KEY (`SteamID`)\n) ENGINE=MyISAM DEFAULT CHARSET=latin1 COLLATE=latin1_swedish_ci"
+    },
+    "player": {
+      "name": "player",
+      "columns": [
+        {
+          "field": "SteamID",
+          "type": "text",
+          "null": "NO",
+          "key": "",
+          "default": null,
+          "extra": ""
+        },
+        {
+          "field": "SteamName",
+          "type": "text",
+          "null": "NO",
+          "key": "",
+          "default": null,
+          "extra": ""
+        },
+        {
+          "field": "Rank",
+          "type": "text",
+          "null": "YES",
+          "key": "",
+          "default": null,
+          "extra": ""
+        },
+        {
+          "field": "TimePlayed",
+          "type": "int(11)",
+          "null": "NO",
+          "key": "",
+          "default": "0",
+          "extra": ""
+        },
+        {
+          "field": "FirstJoined",
+          "type": "bigint(20)",
+          "null": "NO",
+          "key": "",
+          "default": null,
+          "extra": ""
+        },
+        {
+          "field": "Vars",
+          "type": "text",
+          "null": "YES",
+          "key": "",
+          "default": null,
+          "extra": ""
+        }
+      ],
+      "indexes": [],
+      "createStatement": "CREATE TABLE `player` (\n  `SteamID` text NOT NULL,\n  `SteamName` text NOT NULL,\n  `Rank` text DEFAULT NULL,\n  `TimePlayed` int(11) NOT NULL DEFAULT 0,\n  `FirstJoined` bigint(20) NOT NULL,\n  `Vars` text DEFAULT NULL\n) ENGINE=MyISAM DEFAULT CHARSET=utf8mb3 COLLATE=utf8mb3_general_ci"
+    },
+    "player_bans": {
+      "name": "player_bans",
+      "columns": [
+        {
+          "field": "Time",
+          "type": "bigint(20)",
+          "null": "YES",
+          "key": "",
+          "default": null,
+          "extra": ""
+        },
+        {
+          "field": "SteamID",
+          "type": "text",
+          "null": "YES",
+          "key": "",
+          "default": null,
+          "extra": ""
+        },
+        {
+          "field": "A_SteamID",
+          "type": "text",
+          "null": "YES",
+          "key": "",
+          "default": null,
+          "extra": ""
+        },
+        {
+          "field": "Length",
+          "type": "int(11)",
+          "null": "YES",
+          "key": "",
+          "default": null,
+          "extra": ""
+        },
+        {
+          "field": "Reason",
+          "type": "text",
+          "null": "YES",
+          "key": "",
+          "default": null,
+          "extra": ""
+        },
+        {
+          "field": "UnbanReason",
+          "type": "text",
+          "null": "YES",
+          "key": "",
+          "default": null,
+          "extra": ""
+        }
+      ],
+      "indexes": [],
+      "createStatement": "CREATE TABLE `player_bans` (\n  `Time` bigint(20) DEFAULT NULL,\n  `SteamID` text DEFAULT NULL,\n  `A_SteamID` text DEFAULT NULL,\n  `Length` int(11) DEFAULT NULL,\n  `Reason` text DEFAULT NULL,\n  `UnbanReason` text DEFAULT NULL\n) ENGINE=MyISAM DEFAULT CHARSET=utf8mb3 COLLATE=utf8mb3_general_ci"
+    },
+    "player_iplog": {
+      "name": "player_iplog",
+      "columns": [
+        {
+          "field": "LastSeen",
+          "type": "bigint(20)",
+          "null": "NO",
+          "key": "",
+          "default": null,
+          "extra": ""
+        },
+        {
+          "field": "SteamID",
+          "type": "text",
+          "null": "NO",
+          "key": "",
+          "default": null,
+          "extra": ""
+        },
+        {
+          "field": "Address",
+          "type": "text",
+          "null": "NO",
+          "key": "",
+          "default": null,
+          "extra": ""
+        }
+      ],
+      "indexes": [],
+      "createStatement": "CREATE TABLE `player_iplog` (\n  `LastSeen` bigint(20) NOT NULL,\n  `SteamID` text NOT NULL,\n  `Address` text NOT NULL\n) ENGINE=MyISAM DEFAULT CHARSET=utf8mb3 COLLATE=utf8mb3_general_ci"
+    },
+    "player_punishments": {
+      "name": "player_punishments",
+      "columns": [
+        {
+          "field": "SteamID",
+          "type": "varchar(255)",
+          "null": "YES",
+          "key": "",
+          "default": null,
+          "extra": ""
+        },
+        {
+          "field": "Punishment",
+          "type": "varchar(100)",
+          "null": "YES",
+          "key": "",
+          "default": null,
+          "extra": ""
+        },
+        {
+          "field": "Reason",
+          "type": "varchar(255)",
+          "null": "YES",
+          "key": "",
+          "default": null,
+          "extra": ""
+        },
+        {
+          "field": "Length",
+          "type": "int(11)",
+          "null": "YES",
+          "key": "",
+          "default": null,
+          "extra": ""
+        },
+        {
+          "field": "A_SteamID",
+          "type": "varchar(255)",
+          "null": "YES",
+          "key": "",
+          "default": null,
+          "extra": ""
+        },
+        {
+          "field": "Time",
+          "type": "timestamp",
+          "null": "NO",
+          "key": "",
+          "default": "current_timestamp()",
+          "extra": ""
+        }
+      ],
+      "indexes": [],
+      "createStatement": "CREATE TABLE `player_punishments` (\n  `SteamID` varchar(255) DEFAULT NULL,\n  `Punishment` varchar(100) DEFAULT NULL,\n  `Reason` varchar(255) DEFAULT NULL,\n  `Length` int(11) DEFAULT NULL,\n  `A_SteamID` varchar(255) DEFAULT NULL,\n  `Time` timestamp NOT NULL DEFAULT current_timestamp()\n) ENGINE=MyISAM DEFAULT CHARSET=latin1 COLLATE=latin1_swedish_ci"
+    },
+    "playerevents": {
+      "name": "playerevents",
+      "columns": [
+        {
+          "field": "SteamID64",
+          "type": "bigint(20)",
+          "null": "NO",
+          "key": "",
+          "default": null,
+          "extra": ""
+        },
+        {
+          "field": "Date",
+          "type": "int(11)",
+          "null": "NO",
+          "key": "",
+          "default": null,
+          "extra": ""
+        },
+        {
+          "field": "Data",
+          "type": "text",
+          "null": "NO",
+          "key": "",
+          "default": null,
+          "extra": ""
+        }
+      ],
+      "indexes": [],
+      "createStatement": "CREATE TABLE `playerevents` (\n  `SteamID64` bigint(20) NOT NULL,\n  `Date` int(11) NOT NULL,\n  `Data` text NOT NULL\n) ENGINE=MyISAM DEFAULT CHARSET=latin1 COLLATE=latin1_swedish_ci"
+    },
+    "printer_logs": {
+      "name": "printer_logs",
+      "columns": [
+        {
+          "field": "id",
+          "type": "int(11)",
+          "null": "NO",
+          "key": "PRI",
+          "default": null,
+          "extra": "auto_increment"
+        },
+        {
+          "field": "event",
+          "type": "varchar(255)",
+          "null": "NO",
+          "key": "",
+          "default": null,
+          "extra": ""
+        },
+        {
+          "field": "player",
+          "type": "varchar(25)",
+          "null": "NO",
+          "key": "",
+          "default": null,
+          "extra": ""
+        },
+        {
+          "field": "gang",
+          "type": "varchar(255)",
+          "null": "NO",
+          "key": "",
+          "default": null,
+          "extra": ""
+        },
+        {
+          "field": "timestamp",
+          "type": "timestamp",
+          "null": "NO",
+          "key": "",
+          "default": "current_timestamp()",
+          "extra": ""
+        }
+      ],
+      "indexes": [
+        {
+          "keyName": "PRIMARY",
+          "columnName": "id",
+          "nonUnique": 0,
+          "seqInIndex": 1
+        }
+      ],
+      "createStatement": "CREATE TABLE `printer_logs` (\n  `id` int(11) NOT NULL AUTO_INCREMENT,\n  `event` varchar(255) NOT NULL,\n  `player` varchar(25) NOT NULL,\n  `gang` varchar(255) NOT NULL,\n  `timestamp` timestamp NOT NULL DEFAULT current_timestamp(),\n  PRIMARY KEY (`id`)\n) ENGINE=InnoDB AUTO_INCREMENT=35 DEFAULT CHARSET=utf8mb3 COLLATE=utf8mb3_general_ci"
+    },
+    "request": {
+      "name": "request",
+      "columns": [
+        {
+          "field": "id",
+          "type": "int(11)",
+          "null": "NO",
+          "key": "PRI",
+          "default": null,
+          "extra": "auto_increment"
+        },
+        {
+          "field": "message",
+          "type": "varchar(255)",
+          "null": "YES",
+          "key": "",
+          "default": null,
+          "extra": ""
+        },
+        {
+          "field": "channel",
+          "type": "varchar(255)",
+          "null": "YES",
+          "key": "",
+          "default": null,
+          "extra": ""
+        },
+        {
+          "field": "requester",
+          "type": "varchar(255)",
+          "null": "YES",
+          "key": "",
+          "default": null,
+          "extra": ""
+        },
+        {
+          "field": "command",
+          "type": "varchar(255)",
+          "null": "YES",
+          "key": "",
+          "default": null,
+          "extra": ""
+        },
+        {
+          "field": "server",
+          "type": "varchar(255)",
+          "null": "YES",
+          "key": "",
+          "default": null,
+          "extra": ""
+        }
+      ],
+      "indexes": [
+        {
+          "keyName": "PRIMARY",
+          "columnName": "id",
+          "nonUnique": 0,
+          "seqInIndex": 1
+        }
+      ],
+      "createStatement": "CREATE TABLE `request` (\n  `id` int(11) NOT NULL AUTO_INCREMENT,\n  `message` varchar(255) DEFAULT NULL,\n  `channel` varchar(255) DEFAULT NULL,\n  `requester` varchar(255) DEFAULT NULL,\n  `command` varchar(255) DEFAULT NULL,\n  `server` varchar(255) DEFAULT NULL,\n  PRIMARY KEY (`id`)\n) ENGINE=InnoDB AUTO_INCREMENT=48 DEFAULT CHARSET=utf8mb3 COLLATE=utf8mb3_general_ci"
+    }
+  }
+}
