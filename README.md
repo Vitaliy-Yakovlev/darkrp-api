@@ -68,3 +68,4 @@ npm start
 - `PORT` - Server port (default: 3001)
 - `NODE_ENV` - Environment (production/development)
 - `CORS_ORIGIN` - Comma-separated list of allowed origins (optional)
+

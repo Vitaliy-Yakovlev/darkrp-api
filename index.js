@@ -5,10 +5,12 @@ import express from 'express';
 import db from './config/databases.js';
 
 // Import routes
+import authRoutes from './routes/auth.js';
 import bansRoutes from './routes/bans.js';
 import earnersRoutes from './routes/earners.js';
 import gangsRoutes from './routes/gangs.js';
 import leaderboardRoutes from './routes/leaderboard.js';
+import paypalRoutes from './routes/paypal.js';
 import punishmentsRoutes from './routes/punishments.js';
 import staffRoutes from './routes/staff.js';
 import storeRoutes from './routes/store.js';
@@ -59,7 +61,9 @@ app.get('/api/health', async (req, res) => {
 });
 
 // API Routes
+app.use('/api/auth', authRoutes);
 app.use('/api/store', storeRoutes);
+app.use('/api/paypal', paypalRoutes);
 app.use('/api/leaderboard', leaderboardRoutes);
 app.use('/api/bans', bansRoutes);
 app.use('/api/punishments', punishmentsRoutes);
