@@ -1,4 +1,5 @@
 /* eslint-env node */
+import axios from 'axios';
 import express from 'express';
 import openid from 'openid';
 import db from '../config/databases.js';
@@ -64,21 +65,28 @@ router.get('/steam/return', async (req, res) => {
       const steamId64 = result.claimedIdentifier.replace('https://steamcommunity.com/openid/id/', '');
       const steamId = convertSteamId64ToSteamId(steamId64);
 
+      // Получаем данные из Steam API
+      console.log('🔍 Fetching Steam data for steamId64:', steamId64);
+      const steamData = await getSteamUserData(steamId64);
+      console.log('📦 Steam data received:', steamData);
+
       let user = null;
       try {
         const users = await db.query('iga', 'SELECT * FROM player WHERE SteamID = ? LIMIT 1', [steamId]);
         if (users && users.length > 0) {
           user = {
             steamId: users[0].SteamID,
-            name: users[0].SteamName || users[0].name || 'Unknown',
-            avatar: users[0].avatar || null,
+            steamId64: steamId64,
+            name: users[0].SteamName || users[0].name || steamData?.name || 'Unknown',
+            avatar: users[0].avatar || steamData?.avatar || null,
             rank: users[0].Rank || null,
           };
         } else {
           user = {
             steamId: steamId,
-            name: 'Unknown',
-            avatar: null,
+            steamId64: steamId64,
+            name: steamData?.name || 'Unknown',
+            avatar: steamData?.avatar || null,
             rank: null,
           };
         }
@@ -86,8 +94,9 @@ router.get('/steam/return', async (req, res) => {
         console.error('❌ Database error fetching user:', dbError);
         user = {
           steamId: steamId,
-          name: 'Unknown',
-          avatar: null,
+          steamId64: steamId64,
+          name: steamData?.name || 'Unknown',
+          avatar: steamData?.avatar || null,
           rank: null,
         };
       }
@@ -117,18 +126,61 @@ router.get('/me', async (req, res) => {
 
     try {
       const userData = JSON.parse(Buffer.from(token, 'base64').toString());
+      console.log('📥 User data from token:', userData);
+
+      // Если нет steamId64, но есть steamId, конвертируем его
+      let steamId64 = userData.steamId64;
+      if (!steamId64 && userData.steamId) {
+        steamId64 = convertSteamIdToSteamId64(userData.steamId);
+        console.log('🔄 Converted steamId to steamId64:', steamId64);
+      }
 
       const users = await db.query('iga', 'SELECT * FROM player WHERE SteamID = ? LIMIT 1', [userData.steamId]);
       if (users && users.length > 0) {
+        let avatar = users[0].avatar || null;
+        let name = users[0].SteamName || users[0].name || 'Unknown';
+
+        // Если нет аватара или имени в БД и есть steamId64, получаем из Steam
+        if (steamId64 && (!avatar || name === 'Unknown')) {
+          console.log('🔍 Fetching Steam data for user from DB');
+          const steamData = await getSteamUserData(steamId64);
+          if (steamData) {
+            if (!avatar && steamData.avatar) avatar = steamData.avatar;
+            if (name === 'Unknown' && steamData.name) name = steamData.name;
+          }
+        }
+
         const user = {
           steamId: users[0].SteamID,
-          name: users[0].SteamName || users[0].name || 'Unknown',
-          avatar: users[0].avatar || null,
+          steamId64: steamId64 || null,
+          name: name,
+          avatar: avatar,
           rank: users[0].Rank || null,
         };
+        console.log('✅ Returning user data:', user);
         res.json(user);
       } else {
-        res.json(userData);
+        let avatar = userData.avatar || null;
+        let name = userData.name || 'Unknown';
+
+        // Если нет данных в БД и есть steamId64, получаем из Steam
+        if (steamId64 && (!avatar || name === 'Unknown')) {
+          console.log('🔍 Fetching Steam data for user not in DB');
+          const steamData = await getSteamUserData(steamId64);
+          if (steamData) {
+            if (!avatar && steamData.avatar) avatar = steamData.avatar;
+            if (name === 'Unknown' && steamData.name) name = steamData.name;
+          }
+        }
+
+        const result = {
+          ...userData,
+          steamId64: steamId64 || null,
+          name: name,
+          avatar: avatar,
+        };
+        console.log('✅ Returning user data (not in DB):', result);
+        res.json(result);
       }
     } catch {
       res.status(401).json({ error: 'Invalid token' });
@@ -146,6 +198,194 @@ function convertSteamId64ToSteamId(steamId64) {
   const Y = Number(accountId & 1n);
   const Z = Number(accountId >> 1n);
   return `STEAM_${universe}:${Y}:${Z}`;
+}
+
+function convertSteamIdToSteamId64(steamId) {
+  // Формат: STEAM_X:Y:Z
+  const match = steamId.match(/^STEAM_(\d+):(\d+):(\d+)$/);
+  if (!match) {
+    console.error('Invalid SteamID format:', steamId);
+    return null;
+  }
+
+  const universe = BigInt(match[1]);
+  const Y = BigInt(match[2]);
+  const Z = BigInt(match[3]);
+
+  const accountId = (Z << 1n) | Y;
+  const steamId64 = (universe << 56n) | accountId;
+
+  return steamId64.toString();
+}
+
+async function getSteamUserData(steamId64) {
+  if (!steamId64) {
+    console.log('⚠️ No steamId64 provided');
+    return null;
+  }
+
+  // Метод 1: Публичный XML endpoint Steam (не требует API ключа)
+  try {
+    const xmlUrl = `https://steamcommunity.com/profiles/${steamId64}/?xml=1`;
+    console.log('🌐 Method 1: Fetching Steam XML:', xmlUrl);
+
+    const xmlResponse = await axios.get(xmlUrl, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+        Accept: 'application/xml, text/xml, */*',
+      },
+      timeout: 10000,
+    });
+
+    const xmlData = xmlResponse.data;
+    console.log('📄 XML received, length:', xmlData.length);
+
+    // Парсим XML - ищем steamID (имя) и avatarFull
+    const nameMatch =
+      xmlData.match(/<steamID><!\[CDATA\[([^\]]+)\]\]><\/steamID>/i) || xmlData.match(/<steamID>([^<]+)<\/steamID>/i);
+    const avatarMatch =
+      xmlData.match(/<avatarFull><!\[CDATA\[([^\]]+)\]\]><\/avatarFull>/i) ||
+      xmlData.match(/<avatarFull>([^<]+)<\/avatarFull>/i);
+
+    if (nameMatch || avatarMatch) {
+      const result = {
+        name: nameMatch ? nameMatch[1].trim() : null,
+        avatar: avatarMatch ? avatarMatch[1].trim() : null,
+      };
+      console.log('✅ Steam data extracted from XML:', result);
+      if (result.name || result.avatar) {
+        return result;
+      }
+    }
+  } catch (error) {
+    console.log('⚠️ XML method failed:', error.message);
+  }
+
+  // Метод 2: Парсинг HTML страницы Steam
+  try {
+    const profileUrl = `https://steamcommunity.com/profiles/${steamId64}`;
+    console.log('🌐 Method 2: Fetching Steam HTML:', profileUrl);
+
+    const response = await axios.get(profileUrl, {
+      headers: {
+        'User-Agent':
+          'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+        'Accept-Language': 'en-US,en;q=0.9',
+        Referer: 'https://steamcommunity.com/',
+      },
+      timeout: 15000,
+      maxRedirects: 5,
+      validateStatus: () => true, // Принимаем любой статус
+    });
+
+    const html = response.data || '';
+    console.log('📄 HTML received, length:', html.length);
+    console.log('📊 Response status:', response.status);
+
+    // Ищем имя пользователя - несколько способов
+    let name = null;
+
+    // Способ 1: og:title
+    const ogTitleMatch = html.match(/<meta\s+property=["']og:title["']\s+content=["']([^"']+)["']/i);
+    if (ogTitleMatch) {
+      name = ogTitleMatch[1].trim();
+      console.log('✅ Found name via og:title:', name);
+    }
+
+    // Способ 2: из title
+    if (!name) {
+      const titleMatch = html.match(/<title>([^<]+)<\/title>/i);
+      if (titleMatch) {
+        name = titleMatch[1]
+          .replace(/Steam Community\s*::\s*/i, '')
+          .replace(/\s*-\s*Steam Community/i, '')
+          .trim();
+        console.log('✅ Found name via title:', name);
+      }
+    }
+
+    // Способ 3: из playerAvatarHolder
+    if (!name) {
+      const playerNameMatch = html.match(/<span\s+class=["']actual_persona_name["'][^>]*>([^<]+)<\/span>/i);
+      if (playerNameMatch) {
+        name = playerNameMatch[1].trim();
+        console.log('✅ Found name via actual_persona_name:', name);
+      }
+    }
+
+    // Ищем аватар - несколько способов
+    let avatar = null;
+
+    // Способ 1: og:image
+    const ogImageMatch = html.match(/<meta\s+property=["']og:image["']\s+content=["']([^"']+)["']/i);
+    if (ogImageMatch) {
+      avatar = ogImageMatch[1];
+      // Убираем параметры и получаем полный размер
+      avatar = avatar.replace(/\?.*$/, '').replace(/_[a-z]+\.jpg$/i, '_full.jpg');
+      console.log('✅ Found avatar via og:image:', avatar);
+    }
+
+    // Способ 2: playerAvatarHolder
+    if (!avatar) {
+      const avatarMatch = html.match(/<img[^>]*class=["'][^"']*playerAvatar[^"']*["'][^>]*src=["']([^"']+)["']/i);
+      if (avatarMatch) {
+        avatar = avatarMatch[1];
+        // Преобразуем в полный размер
+        avatar = avatar.replace(/\?.*$/, '').replace(/_[a-z]+\.jpg$/i, '_full.jpg');
+        if (!avatar.startsWith('http')) {
+          avatar = 'https://steamcdn-a.akamaihd.net' + avatar;
+        }
+        console.log('✅ Found avatar via playerAvatar:', avatar);
+      }
+    }
+
+    // Способ 3: из JSON данных на странице
+    if (!avatar || !name) {
+      const jsonMatch = html.match(/<script[^>]*>.*?rgProfileData\s*=\s*({[^}]+})/s);
+      if (jsonMatch) {
+        try {
+          const profileData = JSON.parse(jsonMatch[1]);
+          if (!name && profileData.strPersonaName) {
+            name = profileData.strPersonaName;
+            console.log('✅ Found name via rgProfileData:', name);
+          }
+          if (!avatar && profileData.strAvatarFull) {
+            avatar = profileData.strAvatarFull;
+            console.log('✅ Found avatar via rgProfileData:', avatar);
+          }
+        } catch {
+          console.log('⚠️ Could not parse rgProfileData JSON');
+        }
+      }
+    }
+
+    const result = {
+      name: name || null,
+      avatar: avatar || null,
+    };
+
+    console.log('📦 Final extracted data:', result);
+
+    if (!name && !avatar) {
+      console.log('⚠️ Could not extract any data from Steam profile');
+      // Сохраняем часть HTML для отладки
+      console.log('📄 HTML sample (first 2000 chars):', html.substring(0, 2000));
+    }
+
+    return result;
+  } catch (error) {
+    console.error('❌ Error fetching Steam profile:', error.message);
+    if (error.response) {
+      console.error('❌ Steam response status:', error.response.status);
+      console.error('❌ Steam response headers:', error.response.headers);
+    }
+    if (error.code) {
+      console.error('❌ Error code:', error.code);
+    }
+  }
+
+  return null;
 }
 
 export default router;
