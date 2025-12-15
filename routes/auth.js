@@ -275,10 +275,15 @@ async function getSteamUserData(steamId64) {
       if (nameMatch || avatarMatch) {
         let avatar = avatarMatch ? avatarMatch[1].trim() : null;
 
-        // Убираем суффикс размера из аватара, если есть
+        // Обеспечиваем формат _full.jpg для аватара
         if (avatar) {
           avatar = avatar.replace(/\?.*$/, ''); // Убираем параметры
-          avatar = avatar.replace(/_[a-z]+\.jpg$/i, '.jpg'); // Убираем суффикс размера
+          // Если нет суффикса размера, добавляем _full.jpg, иначе заменяем на _full.jpg
+          if (!avatar.match(/_[a-z]+\.jpg$/i)) {
+            avatar = avatar.replace(/\.jpg$/i, '_full.jpg');
+          } else {
+            avatar = avatar.replace(/_[a-z]+\.jpg$/i, '_full.jpg');
+          }
         }
 
         const result = {
@@ -368,8 +373,12 @@ async function getSteamUserData(steamId64) {
       avatar = ogImageMatch[1];
       // Убираем параметры
       avatar = avatar.replace(/\?.*$/, '');
-      // Убираем суффикс размера (_full, _medium, _small) - оставляем просто .jpg
-      avatar = avatar.replace(/_[a-z]+\.jpg$/i, '.jpg');
+      // Обеспечиваем формат _full.jpg
+      if (!avatar.match(/_[a-z]+\.jpg$/i)) {
+        avatar = avatar.replace(/\.jpg$/i, '_full.jpg');
+      } else {
+        avatar = avatar.replace(/_[a-z]+\.jpg$/i, '_full.jpg');
+      }
       console.log('✅ Found avatar via og:image:', avatar);
     }
 
@@ -380,8 +389,12 @@ async function getSteamUserData(steamId64) {
         avatar = avatarMatch[1];
         // Убираем параметры
         avatar = avatar.replace(/\?.*$/, '');
-        // Убираем суффикс размера (_full, _medium, _small) - оставляем просто .jpg
-        avatar = avatar.replace(/_[a-z]+\.jpg$/i, '.jpg');
+        // Обеспечиваем формат _full.jpg
+        if (!avatar.match(/_[a-z]+\.jpg$/i)) {
+          avatar = avatar.replace(/\.jpg$/i, '_full.jpg');
+        } else {
+          avatar = avatar.replace(/_[a-z]+\.jpg$/i, '_full.jpg');
+        }
         if (!avatar.startsWith('http')) {
           avatar = 'https://steamcdn-a.akamaihd.net' + avatar;
         }
@@ -401,9 +414,13 @@ async function getSteamUserData(steamId64) {
           }
           if (!avatar && profileData.strAvatarFull) {
             avatar = profileData.strAvatarFull;
-            // Убираем суффикс размера из аватара
+            // Обеспечиваем формат _full.jpg
             avatar = avatar.replace(/\?.*$/, ''); // Убираем параметры
-            avatar = avatar.replace(/_[a-z]+\.jpg$/i, '.jpg'); // Убираем суффикс размера
+            if (!avatar.match(/_[a-z]+\.jpg$/i)) {
+              avatar = avatar.replace(/\.jpg$/i, '_full.jpg');
+            } else {
+              avatar = avatar.replace(/_[a-z]+\.jpg$/i, '_full.jpg');
+            }
             console.log('✅ Found avatar via rgProfileData:', avatar);
           }
         } catch {
