@@ -273,9 +273,17 @@ async function getSteamUserData(steamId64) {
         xmlData.match(/<avatarFull>([^<]+)<\/avatarFull>/i);
 
       if (nameMatch || avatarMatch) {
+        let avatar = avatarMatch ? avatarMatch[1].trim() : null;
+
+        // Убираем суффикс размера из аватара, если есть
+        if (avatar) {
+          avatar = avatar.replace(/\?.*$/, ''); // Убираем параметры
+          avatar = avatar.replace(/_[a-z]+\.jpg$/i, '.jpg'); // Убираем суффикс размера
+        }
+
         const result = {
           name: nameMatch ? nameMatch[1].trim() : null,
-          avatar: avatarMatch ? avatarMatch[1].trim() : null,
+          avatar: avatar,
         };
         console.log('✅ Steam data extracted from XML:', result);
         if (result.name && result.name !== 'Error' && (result.name || result.avatar)) {
@@ -358,8 +366,10 @@ async function getSteamUserData(steamId64) {
     const ogImageMatch = html.match(/<meta\s+property=["']og:image["']\s+content=["']([^"']+)["']/i);
     if (ogImageMatch) {
       avatar = ogImageMatch[1];
-      // Убираем параметры и получаем полный размер
-      avatar = avatar.replace(/\?.*$/, '').replace(/_[a-z]+\.jpg$/i, '_full.jpg');
+      // Убираем параметры
+      avatar = avatar.replace(/\?.*$/, '');
+      // Убираем суффикс размера (_full, _medium, _small) - оставляем просто .jpg
+      avatar = avatar.replace(/_[a-z]+\.jpg$/i, '.jpg');
       console.log('✅ Found avatar via og:image:', avatar);
     }
 
@@ -368,8 +378,10 @@ async function getSteamUserData(steamId64) {
       const avatarMatch = html.match(/<img[^>]*class=["'][^"']*playerAvatar[^"']*["'][^>]*src=["']([^"']+)["']/i);
       if (avatarMatch) {
         avatar = avatarMatch[1];
-        // Преобразуем в полный размер
-        avatar = avatar.replace(/\?.*$/, '').replace(/_[a-z]+\.jpg$/i, '_full.jpg');
+        // Убираем параметры
+        avatar = avatar.replace(/\?.*$/, '');
+        // Убираем суффикс размера (_full, _medium, _small) - оставляем просто .jpg
+        avatar = avatar.replace(/_[a-z]+\.jpg$/i, '.jpg');
         if (!avatar.startsWith('http')) {
           avatar = 'https://steamcdn-a.akamaihd.net' + avatar;
         }
@@ -389,6 +401,9 @@ async function getSteamUserData(steamId64) {
           }
           if (!avatar && profileData.strAvatarFull) {
             avatar = profileData.strAvatarFull;
+            // Убираем суффикс размера из аватара
+            avatar = avatar.replace(/\?.*$/, ''); // Убираем параметры
+            avatar = avatar.replace(/_[a-z]+\.jpg$/i, '.jpg'); // Убираем суффикс размера
             console.log('✅ Found avatar via rgProfileData:', avatar);
           }
         } catch {
