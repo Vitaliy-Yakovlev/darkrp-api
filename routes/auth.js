@@ -63,7 +63,15 @@ router.get('/steam/return', async (req, res) => {
       }
 
       const steamId64 = result.claimedIdentifier.replace('https://steamcommunity.com/openid/id/', '');
+      console.log('🔍 Received steamId64 from Steam OpenID:', steamId64);
+
+      // Проверяем формат steamId64 (должен быть 17 цифр, начинаться с 7656119...)
+      if (!steamId64 || steamId64.length < 17 || !steamId64.startsWith('7656119')) {
+        console.error('⚠️ Invalid steamId64 format:', steamId64);
+      }
+
       const steamId = convertSteamId64ToSteamId(steamId64);
+      console.log('🔍 Converted to steamId:', steamId);
 
       // Получаем данные из Steam API
       console.log('🔍 Fetching Steam data for steamId64:', steamId64);
@@ -212,10 +220,21 @@ function convertSteamIdToSteamId64(steamId) {
   const Y = BigInt(match[2]);
   const Z = BigInt(match[3]);
 
+  // Правильная формула: steamId64 = (Z * 2) + Y + 76561197960265728
+  // Где 76561197960265728 = 0x0110000100000000 (магическое число Steam)
   const accountId = (Z << 1n) | Y;
-  const steamId64 = (universe << 56n) | accountId;
+  const baseSteamId64 = 0x0110000100000000n; // 76561197960265728
+  const steamId64 = baseSteamId64 + accountId;
 
-  return steamId64.toString();
+  const result = steamId64.toString();
+  console.log(`🔄 Converted ${steamId} to steamId64: ${result} (should start with 7656119)`);
+
+  // Проверка формата
+  if (!result.startsWith('7656119') || result.length !== 17) {
+    console.error(`⚠️ Invalid steamId64 format: ${result}`);
+  }
+
+  return result;
 }
 
 async function getSteamUserData(steamId64) {
@@ -235,30 +254,40 @@ async function getSteamUserData(steamId64) {
         Accept: 'application/xml, text/xml, */*',
       },
       timeout: 10000,
+      validateStatus: () => true,
     });
 
-    const xmlData = xmlResponse.data;
+    const xmlData = xmlResponse.data || '';
     console.log('📄 XML received, length:', xmlData.length);
+    console.log('📊 XML response status:', xmlResponse.status);
 
-    // Парсим XML - ищем steamID (имя) и avatarFull
-    const nameMatch =
-      xmlData.match(/<steamID><!\[CDATA\[([^\]]+)\]\]><\/steamID>/i) || xmlData.match(/<steamID>([^<]+)<\/steamID>/i);
-    const avatarMatch =
-      xmlData.match(/<avatarFull><!\[CDATA\[([^\]]+)\]\]><\/avatarFull>/i) ||
-      xmlData.match(/<avatarFull>([^<]+)<\/avatarFull>/i);
+    // Проверяем, не ошибка ли это
+    if (xmlData.includes('Error') || xmlResponse.status !== 200) {
+      console.log('⚠️ XML endpoint returned error');
+    } else {
+      // Парсим XML - ищем steamID (имя) и avatarFull
+      const nameMatch =
+        xmlData.match(/<steamID><!\[CDATA\[([^\]]+)\]\]><\/steamID>/i) || xmlData.match(/<steamID>([^<]+)<\/steamID>/i);
+      const avatarMatch =
+        xmlData.match(/<avatarFull><!\[CDATA\[([^\]]+)\]\]><\/avatarFull>/i) ||
+        xmlData.match(/<avatarFull>([^<]+)<\/avatarFull>/i);
 
-    if (nameMatch || avatarMatch) {
-      const result = {
-        name: nameMatch ? nameMatch[1].trim() : null,
-        avatar: avatarMatch ? avatarMatch[1].trim() : null,
-      };
-      console.log('✅ Steam data extracted from XML:', result);
-      if (result.name || result.avatar) {
-        return result;
+      if (nameMatch || avatarMatch) {
+        const result = {
+          name: nameMatch ? nameMatch[1].trim() : null,
+          avatar: avatarMatch ? avatarMatch[1].trim() : null,
+        };
+        console.log('✅ Steam data extracted from XML:', result);
+        if (result.name && result.name !== 'Error' && (result.name || result.avatar)) {
+          return result;
+        }
       }
     }
   } catch (error) {
     console.log('⚠️ XML method failed:', error.message);
+    if (error.response) {
+      console.log('⚠️ XML error status:', error.response.status);
+    }
   }
 
   // Метод 2: Парсинг HTML страницы Steam
@@ -293,15 +322,23 @@ async function getSteamUserData(steamId64) {
       console.log('✅ Found name via og:title:', name);
     }
 
-    // Способ 2: из title
+    // Способ 2: из title (но пропускаем страницы ошибок)
     if (!name) {
       const titleMatch = html.match(/<title>([^<]+)<\/title>/i);
       if (titleMatch) {
-        name = titleMatch[1]
-          .replace(/Steam Community\s*::\s*/i, '')
-          .replace(/\s*-\s*Steam Community/i, '')
-          .trim();
-        console.log('✅ Found name via title:', name);
+        const rawTitle = titleMatch[1].trim();
+        // Пропускаем страницы ошибок
+        if (!rawTitle.toLowerCase().includes('error') && !rawTitle.toLowerCase().includes('not found')) {
+          name = rawTitle
+            .replace(/Steam Community\s*::\s*/i, '')
+            .replace(/\s*-\s*Steam Community/i, '')
+            .trim();
+          if (name && name.length > 0) {
+            console.log('✅ Found name via title:', name);
+          }
+        } else {
+          console.log('⚠️ Title indicates error page:', rawTitle);
+        }
       }
     }
 
