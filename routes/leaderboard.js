@@ -99,13 +99,56 @@ router.get('/events', async (req, res) => {
 // Playtime Leaderboard - infamous_iga, player
 router.get('/playtime', async (req, res) => {
   try {
-    const { limit = 100, offset = 0 } = req.query;
+    const { limit = 50, offset = 0, search } = req.query;
+
+    // Определяем колонку для времени игры
+    let timeColumn = null;
+    try {
+      const columns = await db.query('iga', 'SHOW COLUMNS FROM player');
+      const possibleTimeColumns = ['TimePlayed', 'timeplayed', 'playtime', 'PlayTime', 'time_played'];
+      for (const col of possibleTimeColumns) {
+        const found = columns.find((c) => c.Field === col);
+        if (found) {
+          timeColumn = found.Field;
+          break;
+        }
+      }
+      // Если не нашли, ищем первую числовую колонку
+      if (!timeColumn) {
+        const numericColumn = columns.find((col) => {
+          const type = col.Type.toLowerCase();
+          return type.includes('int') || type.includes('bigint');
+        });
+        timeColumn = numericColumn?.Field || 'TimePlayed';
+      }
+    } catch (err) {
+      console.warn('Could not get table structure:', err.message);
+      timeColumn = 'TimePlayed';
+    }
+
+    let query = 'SELECT SteamID, SteamName, TimePlayed, FirstJoined FROM player';
+    let countQuery = 'SELECT COUNT(*) as total FROM player';
+    const params = [];
+    const countParams = [];
+
+    if (search) {
+      const searchCondition = ' WHERE SteamID LIKE ? OR SteamName LIKE ?';
+      query += searchCondition;
+      countQuery += searchCondition;
+      const searchPattern = `%${search}%`;
+      params.push(searchPattern, searchPattern);
+      countParams.push(searchPattern, searchPattern);
+    }
+
+    query += ` ORDER BY ${timeColumn || 'TimePlayed'} DESC LIMIT ? OFFSET ?`;
+    params.push(parseInt(limit), parseInt(offset));
+
+    console.log('🔍 Playtime query:', query);
+    console.log('🔍 Playtime params:', params);
+
     const [leaderboard, countResult] = await Promise.all([
-      db.query('iga', 'SELECT * FROM player ORDER BY playtime DESC LIMIT ? OFFSET ?', [
-        parseInt(limit),
-        parseInt(offset),
-      ]),
-      db.query('iga', 'SELECT COUNT(*) as total FROM player'),
+      db.query('iga', query, params),
+      db.query('iga', countQuery, countParams),
     ]);
 
     const total = countResult[0]?.total || 0;
@@ -117,6 +160,7 @@ router.get('/playtime', async (req, res) => {
       offset: parseInt(offset),
     });
   } catch (error) {
+    console.error('Playtime leaderboard error:', error.message);
     res.status(500).json({ error: error.message });
   }
 });
