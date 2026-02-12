@@ -46,19 +46,6 @@ npm start
 - `GET /api/staff` - Staff endpoints
 - `GET /api/earners` - Earners endpoints
 
-## Deployment on Railway
-
-1. Create a new project on Railway
-2. Connect your GitHub repository
-3. Add environment variables in Railway Dashboard:
-   - `DB_HOST`
-   - `DB_USER`
-   - `DB_PASSWORD`
-   - `DB_PORT`
-   - `PORT` (Railway will set this automatically)
-   - `NODE_ENV=production`
-4. Railway will automatically detect Node.js and run `npm start`
-
 ## Environment Variables
 
 - `DB_HOST` - Database host
@@ -68,4 +55,5 @@ npm start
 - `PORT` - Server port (default: 3001)
 - `NODE_ENV` - Environment (production/development)
 - `CORS_ORIGIN` - Comma-separated list of allowed origins (optional)
+
 

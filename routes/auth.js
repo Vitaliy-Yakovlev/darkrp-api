@@ -13,7 +13,7 @@ router.get('/test', (req, res) => {
 
 router.get('/steam', async (req, res) => {
   try {
-    const hostHeader = req.get('host') || process.env.RAILWAY_PUBLIC_DOMAIN || 'localhost:3001';
+    const hostHeader = req.get('host') || 'localhost:3001';
     const isLocalhost = hostHeader.includes('localhost') || hostHeader.includes('127.0.0.1');
     const protocol =
       req.protocol === 'https' || req.get('x-forwarded-proto') === 'https' || !isLocalhost ? 'https' : 'http';
@@ -41,7 +41,7 @@ router.get('/steam', async (req, res) => {
 
 router.get('/steam/return', async (req, res) => {
   try {
-    const hostHeader = req.get('host') || process.env.RAILWAY_PUBLIC_DOMAIN || 'localhost:3001';
+    const hostHeader = req.get('host') || 'localhost:3001';
     const isLocalhost = hostHeader.includes('localhost') || hostHeader.includes('127.0.0.1');
     const protocol =
       req.protocol === 'https' || req.get('x-forwarded-proto') === 'https' || !isLocalhost ? 'https' : 'http';
