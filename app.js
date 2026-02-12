@@ -19,8 +19,30 @@ dotenv.config();
 
 const app = express();
 
-// Middleware
-app.use(cors());
+// Normalize path: если запрос приходит без префикса `/api`, добавим его
+app.use((req, res, next) => {
+  try {
+    if (!req.path.startsWith('/api')) {
+      req.url = `/api${req.url}`;
+    }
+  } catch (e) {}
+  next();
+});
+
+// CORS: явно выставляем заголовки и обрабатываем preflight
+app.use((req, res, next) => {
+  const origin = process.env.CORS_ORIGIN || '*';
+  res.setHeader('Access-Control-Allow-Origin', origin);
+  res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PUT,PATCH,DELETE,OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  res.setHeader('Access-Control-Allow-Credentials', 'true');
+  if (req.method === 'OPTIONS') {
+    return res.sendStatus(204);
+  }
+  next();
+});
+
+app.use(cors({ origin: process.env.CORS_ORIGIN || true }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
